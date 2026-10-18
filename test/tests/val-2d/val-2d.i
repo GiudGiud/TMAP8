@@ -6,13 +6,8 @@ kB = '${units 1.380649e-23 J/K}' # Boltzmann constant (from PhysicalConstants.h 
 
 # Model parameters
 TDS_initial_time = '${units 5e3 s}'
-TDS_critial_time_1 = '${units 5400 s}'
-TDS_critial_time_2 = '${units 5404 s}'
 simulation_time = '${units 6.8e3 s}'
 outputs_initial_time = '${units 4000 s}'
-step_interval_max = 50 # (-)
-step_interval_mid = 15 # (-)
-step_interval_min = 6 # (-)
 bound_value_max = '${units 2e4 at/mum^3}'
 bound_value_min = '${units -1e-10 at/mum^3}'
 
@@ -368,17 +363,6 @@ temperature_rate = '${units ${fparse 50 / 60} K/s}'
     symbol_values = 'source_distribution_function surface_flux_function'
     expression = 'source_distribution_function * surface_flux_function'
   []
-  # maximum time size during simulations
-  [max_dt_size_function]
-    type = ParsedFunction
-    expression = 'if(t<${TDS_initial_time}  , ${step_interval_mid}, ${step_interval_min})'
-  []
-  [max_dt_size_function_coarse]
-    type = ParsedFunction
-    expression = 'if(t<${TDS_initial_time}  , ${step_interval_mid},
-                  if(t<${TDS_critial_time_1}, ${step_interval_max},
-                  if(t<${TDS_critial_time_2}, ${step_interval_min}, ${step_interval_max})))'
-  []
 []
 
 [Postprocessors]
@@ -412,12 +396,6 @@ temperature_rate = '${units ${fparse 50 / 60} K/s}'
     execute_on = 'initial nonlinear linear timestep_end'
     outputs = none
   []
-  [max_time_step_size]
-    type = FunctionValuePostprocessor
-    function = max_dt_size_function
-    execute_on = 'initial nonlinear linear timestep_end'
-    outputs = none
-  []
 []
 
 [Preconditioning]
@@ -440,14 +418,29 @@ temperature_rate = '${units ${fparse 50 / 60} K/s}'
   nl_rel_tol = 1e-10
   nl_max_its = 34
   [TimeStepper]
-    type = IterationAdaptiveDT
-    dt = 1.0
-    iteration_window = 5
-    optimal_iterations = 26
-    growth_factor = 1.1
-    cutback_factor = 0.9
-    cutback_factor_at_failure = 0.9
-    timestep_limiting_postprocessor = max_time_step_size
+    type = TimeSequenceFromTimes
+    times = time_sequence
+  []
+  # This TimeStepper can be used to automatically decide
+  # the time step sizes
+  # [TimeStepper]
+  #   type = IterationAdaptiveDT
+  #   dt = 1.0
+  #   iteration_window = 5
+  #   optimal_iterations = 26
+  #   growth_factor = 1.1
+  #   cutback_factor = 0.9
+  #   cutback_factor_at_failure = 0.9
+  #   timestep_limiting_postprocessor = max_time_step_size
+  # []
+[]
+
+[Times]
+  # time steps from a previous adaptive time stepping simulation, without its failed time steps
+  [time_sequence]
+    type = CSVFileTimes
+    files = 'val-2d_time_sequence.csv'
+    outputs = none
   []
 []
 
